@@ -55,6 +55,7 @@ func (b *Bisection) Init(f ObjGrader, initLoc, initObj, initGrad float64) error 
 
 func (b *Bisection) Iterate() (loc, obj, grad float64, nFunEvals int, err error) {
 	var realgrad float64
+
 	loc = b.initLoc + b.currStep
 	obj, realgrad = b.f.ObjGrad(loc)
 
@@ -62,6 +63,7 @@ func (b *Bisection) Iterate() (loc, obj, grad float64, nFunEvals int, err error)
 	if b.posInitGrad {
 		grad = -realgrad
 	}
+
 	/*
 		fmt.Println("minstep = ", b.minStep, " minobj = ", b.minObj, " mingrad = ", b.minGrad)
 		fmt.Println("maxstep = ", b.maxStep, " maxobj = ", b.maxObj, " maxgrad = ", b.maxGrad)
@@ -104,12 +106,25 @@ func (b *Bisection) Iterate() (loc, obj, grad float64, nFunEvals int, err error)
 			return loc, obj, realgrad, 1, nil
 		}
 	}
+
 	// Have already bounded the minimum, now need to find the point
 	if grad < 0 {
-		b.minStep = b.currStep
-		b.minObj = obj
-		b.minGrad = grad
+		if obj < b.minObj {
+			// Improved in the function value and still a negative gradient, so
+			// go more in that direction
+			b.minStep = b.currStep
+			b.minObj = obj
+			b.minGrad = grad
+		} else {
+			// Negative gradient, but increase in function value, so must have
+			// skipped over a local minimum. Set this as the new maximum location
+			b.maxStep = b.currStep
+			b.maxObj = obj
+			b.maxGrad = grad
+		}
 	} else {
+		// Gradient is positive, so minimum must be between the max point and
+		// the minimum point
 		b.maxStep = b.currStep
 		b.maxObj = obj
 		b.maxGrad = grad
